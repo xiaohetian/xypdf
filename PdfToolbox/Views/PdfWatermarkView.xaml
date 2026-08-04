@@ -1,0 +1,250 @@
+<UserControl x:Class="PdfToolbox.Views.PdfWatermarkView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:PdfToolbox.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:PdfWatermarkViewModel}">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24">
+        <Grid x:Name="RootGrid"
+              AllowDrop="True"
+              DragEnter="RootGrid_DragEnter"
+              DragOver="RootGrid_DragOver"
+              DragLeave="RootGrid_DragLeave"
+              Drop="RootGrid_Drop">
+            <StackPanel MaxWidth="800">
+            <!-- 模式选择 -->
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel>
+                    <TextBlock Text="操作模式" Style="{StaticResource SectionTitleStyle}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <RadioButton Content="添加水印"
+                                     IsChecked="{Binding WorkMode, Converter={StaticResource RadioButtonConverter}, ConverterParameter=0}"
+                                     FontSize="14" FontWeight="SemiBold"/>
+                        <RadioButton Content="去除水印"
+                                     IsChecked="{Binding WorkMode, Converter={StaticResource RadioButtonConverter}, ConverterParameter=1}"
+                                     Margin="24,0,0,0" FontSize="14" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 文件选择 -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="文件选择" Style="{StaticResource SectionTitleStyle}"/>
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="输入文件:" VerticalAlignment="Center" Width="70"/>
+                        <TextBox Grid.Column="1" Text="{Binding InputPath}" Margin="8,0" IsReadOnly="True" Style="{StaticResource InputTextBoxStyle}"/>
+                        <Button Grid.Column="2" Content="浏览..." Command="{Binding SelectInputFileCommand}" Style="{StaticResource PrimaryButtonStyle}"/>
+                    </Grid>
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="输出文件:" VerticalAlignment="Center" Width="70"/>
+                        <TextBox Grid.Column="1" Text="{Binding OutputPath}" Margin="8,0" IsReadOnly="True" Style="{StaticResource InputTextBoxStyle}"/>
+                        <Button Grid.Column="2" Content="浏览..." Command="{Binding SelectOutputPathCommand}" Style="{StaticResource PrimaryButtonStyle}"/>
+                    </Grid>
+                    <TextBlock Text="{Binding TotalPages, StringFormat=总页数: {0}}" Margin="0,8,0,0"
+                               Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ================ 添加水印设置 ================ -->
+            <StackPanel Visibility="{Binding WorkMode, Converter={StaticResource IntToVisibilityConverter}}">
+                <!-- 水印类型 -->
+                <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0">
+                    <StackPanel>
+                        <TextBlock Text="水印类型" Style="{StaticResource SectionTitleStyle}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                            <RadioButton Content="文字水印" IsChecked="{Binding WatermarkType, Converter={StaticResource IntToBoolConverter}}"/>
+                            <RadioButton Content="图片水印" IsChecked="{Binding WatermarkType, Converter={StaticResource IntToBoolConverter}, ConverterParameter=1}" Margin="24,0,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- 文字水印设置 -->
+                <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0">
+                    <StackPanel>
+                        <TextBlock Text="水印设置" Style="{StaticResource SectionTitleStyle}"/>
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="水印文字:" VerticalAlignment="Center" Width="70"/>
+                            <TextBox Grid.Column="1" Text="{Binding WatermarkText}" Margin="8,0" Style="{StaticResource InputTextBoxStyle}"/>
+                        </Grid>
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="字体大小:" VerticalAlignment="Center" Width="70"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <Slider Width="200" Minimum="12" Maximum="120" Value="{Binding FontSize}" Style="{StaticResource ModernSliderStyle}"/>
+                                <TextBlock Text="{Binding FontSize, StringFormat={}{0}pt}" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="水印颜色:" VerticalAlignment="Center" Width="70"/>
+                            <TextBox Grid.Column="1" Text="{Binding WatermarkColor}" Margin="8,0" Width="120" HorizontalAlignment="Left" Style="{StaticResource InputTextBoxStyle}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 图片水印设置 -->
+                <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0">
+                    <StackPanel>
+                        <TextBlock Text="图片水印设置" Style="{StaticResource SectionTitleStyle}"/>
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="水印图片:" VerticalAlignment="Center" Width="70"/>
+                            <TextBox Grid.Column="1" Text="{Binding WatermarkImagePath}" Margin="8,0" IsReadOnly="True" Style="{StaticResource InputTextBoxStyle}"/>
+                            <Button Grid.Column="2" Content="浏览..." Command="{Binding SelectWatermarkImageCommand}" Style="{StaticResource PrimaryButtonStyle}"/>
+                        </Grid>
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="图片宽度:" VerticalAlignment="Center" Width="70"/>
+                            <TextBox Grid.Column="1" Text="{Binding ImageWidth}" Margin="8,0" Width="120" HorizontalAlignment="Left" Style="{StaticResource InputTextBoxStyle}"/>
+                        </Grid>
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="图片高度:" VerticalAlignment="Center" Width="70"/>
+                            <TextBox Grid.Column="1" Text="{Binding ImageHeight}" Margin="8,0" Width="120" HorizontalAlignment="Left" Style="{StaticResource InputTextBoxStyle}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 通用设置 -->
+                <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0">
+                    <StackPanel>
+                        <TextBlock Text="布局设置" Style="{StaticResource SectionTitleStyle}"/>
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="透明度:" VerticalAlignment="Center" Width="70"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <Slider Width="200" Minimum="0.05" Maximum="1" Value="{Binding Opacity}" Style="{StaticResource ModernSliderStyle}"/>
+                                <TextBlock Text="{Binding Opacity, StringFormat={}{0:P0}}" Margin="12,0,0,0" VerticalAlignment="Center" Width="40"/>
+                            </StackPanel>
+                        </Grid>
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="旋转角度:" VerticalAlignment="Center" Width="70"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <Slider Width="200" Minimum="-180" Maximum="180" Value="{Binding Angle}" Style="{StaticResource ModernSliderStyle}"/>
+                                <TextBlock Text="{Binding Angle, StringFormat={}{0}°}" Margin="12,0,0,0" VerticalAlignment="Center" Width="40"/>
+                            </StackPanel>
+                        </Grid>
+                        <CheckBox Content="平铺水印（重复填充整个页面）" IsChecked="{Binding Tile}" Margin="0,12,0,0"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- ================ 去除水印设置 ================ -->
+            <StackPanel Visibility="{Binding WorkMode, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=1}">
+                <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0">
+                    <StackPanel>
+                        <TextBlock Text="去除水印设置" Style="{StaticResource SectionTitleStyle}"/>
+                        <TextBlock Text="通过图像处理技术识别并移除PDF中的水印。此方法为有损处理，输出为图片级PDF。"
+                                   Margin="0,8,0,0" Foreground="{DynamicResource TextSecondaryBrush}"
+                                   FontSize="12" TextWrapping="Wrap"/>
+
+                        <Grid Margin="0,16,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="水印颜色:" VerticalAlignment="Center" Width="75"/>
+                            <TextBox Grid.Column="1" Text="{Binding RemoveColor}" Margin="8,0" Width="120"
+                                     HorizontalAlignment="Left" Style="{StaticResource InputTextBoxStyle}"
+                                     ToolTip="输入水印颜色的HEX值，例如 #C0C0C0 为灰色"/>
+                        </Grid>
+
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="颜色容差:" VerticalAlignment="Center" Width="75"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <Slider Width="200" Minimum="10" Maximum="200" Value="{Binding RemoveTolerance}"
+                                        Style="{StaticResource ModernSliderStyle}"
+                                        ToolTip="数值越大，匹配的水印颜色范围越广"/>
+                                <TextBlock Text="{Binding RemoveTolerance}" Margin="12,0,0,0" VerticalAlignment="Center" Width="30"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="去除强度:" VerticalAlignment="Center" Width="75"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <Slider Width="200" Minimum="0.1" Maximum="1.0" TickFrequency="0.1"
+                                        Value="{Binding RemoveStrength}" Style="{StaticResource ModernSliderStyle}"
+                                        ToolTip="强度越高，水印去除越彻底，但可能影响画质"/>
+                                <TextBlock Text="{Binding RemoveStrength, StringFormat={}{0:P0}}" Margin="12,0,0,0" VerticalAlignment="Center" Width="40"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Border Background="#FFF8E1" CornerRadius="6" Padding="12" Margin="0,16,0,0">
+                            <StackPanel>
+                                <TextBlock Text="⚠ 使用说明" FontWeight="SemiBold" Foreground="#F57F17" FontSize="13"/>
+                                <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="#795548" Margin="0,4,0,0">
+                                    <Run Text="1."/> 设置水印颜色：选择与水印最接近的颜色值<LineBreak/>
+                                    <Run Text="2."/> 调整容差：容差太小会漏掉，太大会误伤正文<LineBreak/>
+                                    <Run Text="3."/> 注意：输出为图片级PDF，文字不可选中，适合扫描件/盖章类PDF
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- 进度与操作 -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0">
+                <StackPanel>
+                    <ProgressBar Height="8" Value="{Binding ProgressValue}" Margin="0,0,0,16"/>
+                    <Button Content="{Binding WorkMode, Converter={StaticResource IntToStringConverter}, ConverterParameter=添加水印|开始去除水印}"
+                            Command="{Binding ProcessCommand}"
+                            IsEnabled="{Binding IsProcessing, Converter={StaticResource InverseBoolConverter}}"
+                            Style="{StaticResource PrimaryButtonStyle}" HorizontalAlignment="Center" Padding="32,12"/>
+                    <TextBlock Text="{Binding StatusMessage}" Margin="0,8,0,0" HorizontalAlignment="Center"
+                               Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

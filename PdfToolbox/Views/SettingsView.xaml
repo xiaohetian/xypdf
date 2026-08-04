@@ -1,0 +1,93 @@
+<UserControl x:Class="PdfToolbox.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:vm="clr-namespace:PdfToolbox.ViewModels"
+             mc:Ignorable="d"
+             d:DesignHeight="700" d:DesignWidth="800"
+             d:DataContext="{d:DesignInstance Type=vm:SettingsViewModel}">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel MaxWidth="800" HorizontalAlignment="Left">
+
+            <!-- Header -->
+            <TextBlock Text="设置" Style="{StaticResource SectionTitleStyle}"/>
+            <TextBlock Text="自定义应用程序行为" FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}"
+                       Margin="0,-12,0,20"/>
+
+            <!-- Appearance -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="外观主题" FontSize="15" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+                    <RadioButton Content="默认蓝"
+                                 IsChecked="{Binding ThemeIndex, Converter={StaticResource RadioButtonConverter}, ConverterParameter=0}"/>
+                    <RadioButton Content="翡翠绿"
+                                 IsChecked="{Binding ThemeIndex, Converter={StaticResource RadioButtonConverter}, ConverterParameter=1}"/>
+                    <RadioButton Content="典雅紫"
+                                 IsChecked="{Binding ThemeIndex, Converter={StaticResource RadioButtonConverter}, ConverterParameter=2}"/>
+                    <RadioButton Content="暗色"
+                                 IsChecked="{Binding ThemeIndex, Converter={StaticResource RadioButtonConverter}, ConverterParameter=3}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Default Paths -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="默认路径" FontSize="15" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="输出目录" Style="{StaticResource LabelStyle}" MinWidth="70"/>
+                        <TextBox Text="{Binding DefaultOutputPath, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource InputTextBoxStyle}" Width="400" IsReadOnly="True"/>
+                        <Button Content="浏览" Command="{Binding SelectOutputPathCommand}"
+                                Style="{StaticResource SecondaryButtonStyle}" Margin="10,0,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Default DPI -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="默认 DPI" FontSize="15" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Slider Grid.Column="0" Minimum="72" Maximum="600" TickFrequency="1"
+                                IsSnapToTickEnabled="True"
+                                Value="{Binding DefaultDpi, UpdateSourceTrigger=PropertyChanged}"
+                                Style="{StaticResource ModernSliderStyle}"/>
+                        <Border Grid.Column="1" Margin="12,0,0,0"
+                                Background="{DynamicResource PrimaryBrush}" CornerRadius="6"
+                                Padding="12,4" MinWidth="50">
+                            <TextBlock Text="{Binding DefaultDpi, StringFormat={}{0} DPI}"
+                                       FontSize="13" FontWeight="SemiBold"
+                                       Foreground="White" HorizontalAlignment="Center"/>
+                        </Border>
+                    </Grid>
+                    <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
+                               Margin="0,6,0,0">
+                        <Run Text="范围：72"/><Run Text="–"/><Run Text="600 DPI。值越高，图片型 PDF 质量越好，文件体积越大。"/>
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+
+            <!-- Auto Save -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="自动保存" FontSize="15" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+                    <CheckBox IsChecked="{Binding AutoSave}" Content="修改设置后自动保存"/>
+                    <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
+                               Margin="26,4,0,0"
+                               Text="关闭后，您需要点击应用程序中的保存按钮以应用设置更改。"/>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

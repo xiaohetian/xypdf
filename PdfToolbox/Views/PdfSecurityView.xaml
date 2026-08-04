@@ -1,0 +1,123 @@
+<UserControl x:Class="PdfToolbox.Views.PdfSecurityView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:PdfToolbox.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:PdfSecurityViewModel}">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24">
+        <Grid x:Name="RootGrid"
+              AllowDrop="True"
+              DragEnter="RootGrid_DragEnter"
+              DragOver="RootGrid_DragOver"
+              DragLeave="RootGrid_DragLeave"
+              Drop="RootGrid_Drop">
+            <StackPanel MaxWidth="800">
+            <!-- Tab 切换 -->
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel>
+                    <TextBlock Text="功能选择" Style="{StaticResource SectionTitleStyle}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <RadioButton Content="加密 PDF" IsChecked="{Binding ActiveTab, Converter={StaticResource IntToBoolConverter}}"/>
+                        <RadioButton Content="解密 PDF" IsChecked="{Binding ActiveTab, Converter={StaticResource IntToBoolConverter}, ConverterParameter=1}" Margin="24,0,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 文件选择 -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="文件选择" Style="{StaticResource SectionTitleStyle}"/>
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="输入文件:" VerticalAlignment="Center" Width="70"/>
+                        <TextBox Grid.Column="1" Text="{Binding InputPath}" Margin="8,0" IsReadOnly="True" Style="{StaticResource InputTextBoxStyle}"/>
+                        <Button Grid.Column="2" Content="浏览..." Command="{Binding SelectInputFileCommand}" Style="{StaticResource PrimaryButtonStyle}"/>
+                    </Grid>
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="输出文件:" VerticalAlignment="Center" Width="70"/>
+                        <TextBox Grid.Column="1" Text="{Binding OutputPath}" Margin="8,0" IsReadOnly="True" Style="{StaticResource InputTextBoxStyle}"/>
+                        <Button Grid.Column="2" Content="浏览..." Command="{Binding SelectOutputPathCommand}" Style="{StaticResource PrimaryButtonStyle}"/>
+                    </Grid>
+                    <TextBlock Text="{Binding TotalPages, StringFormat=总页数: {0}}" Margin="0,8,0,0" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 加密设置 -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0"
+                    Visibility="{Binding ActiveTab, Converter={StaticResource IntToVisibilityConverter}}">
+                <StackPanel>
+                    <TextBlock Text="加密设置" Style="{StaticResource SectionTitleStyle}"/>
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="用户密码:" VerticalAlignment="Center" Width="80"/>
+                        <TextBox Grid.Column="1" Text="{Binding UserPassword}" Margin="8,0" Style="{StaticResource InputTextBoxStyle}"/>
+                    </Grid>
+                    <TextBlock Text="打开PDF时需要输入的密码" Margin="88,4,0,0" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12"/>
+
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="所有者密码:" VerticalAlignment="Center" Width="80"/>
+                        <TextBox Grid.Column="1" Text="{Binding OwnerPassword}" Margin="8,0" Style="{StaticResource InputTextBoxStyle}"/>
+                    </Grid>
+                    <TextBlock Text="修改权限时需要输入的密码（可选）" Margin="88,4,0,0" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12"/>
+
+                    <TextBlock Text="权限设置" Margin="0,16,0,8" FontWeight="SemiBold" FontSize="14"/>
+                    <CheckBox Content="允许打印" IsChecked="{Binding AllowPrinting}" Margin="0,4,0,0"/>
+                    <CheckBox Content="允许复制内容" IsChecked="{Binding AllowCopy}" Margin="0,4,0,0"/>
+                    <CheckBox Content="允许修改文档" IsChecked="{Binding AllowModify}" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 解密设置 -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0"
+                    Visibility="{Binding ActiveTab, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=1}">
+                <StackPanel>
+                    <TextBlock Text="解密设置" Style="{StaticResource SectionTitleStyle}"/>
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="密码:" VerticalAlignment="Center" Width="80"/>
+                        <TextBox Grid.Column="1" Text="{Binding DecryptPassword}" Margin="8,0" Style="{StaticResource InputTextBoxStyle}"/>
+                    </Grid>
+                    <TextBlock Text="输入当前PDF的打开密码以移除密码保护" Margin="88,4,0,0" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 进度与操作 -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0">
+                <StackPanel>
+                    <ProgressBar Height="8" Value="{Binding ProgressValue}" Margin="0,0,0,16"/>
+                    <Button Content="{Binding ActiveTab, Converter={StaticResource IntToStringConverter}, ConverterParameter=加密|解密}"
+                            Command="{Binding ProcessCommand}" IsEnabled="{Binding IsProcessing, Converter={StaticResource InverseBoolConverter}}"
+                            Style="{StaticResource PrimaryButtonStyle}" HorizontalAlignment="Center" Padding="32,12"/>
+                    <TextBlock Text="{Binding StatusMessage}" Margin="0,8,0,0" HorizontalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

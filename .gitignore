@@ -1,0 +1,36 @@
+# Build outputs
+bin/
+obj/
+*.user
+
+# Visual Studio
+.vs/
+*.suo
+*.userprefs
+*.userosscache
+*_i.c
+*_p.c
+*.ncb
+*.sln.docstates
+
+# MSIX / store packaging
+msix-check/
+PackageContent/
+*.msix
+*.appx
+*.msixupload
+*.appxupload
+AppPackages/
+publish/
+
+# Agent / tool state
+.omo/
+.sisyphus/
+.codegraph/
+
+# Misc
+stderr.txt
+stdout.txt
+*.log
+.DS_Store
+Thumbs.db

@@ -1,0 +1,77 @@
+<UserControl x:Class="PdfToolbox.Views.PdfRotateView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:PdfToolbox.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:PdfRotateViewModel}">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24">
+        <StackPanel MaxWidth="800">
+            <!-- 文件选择 -->
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel>
+                    <TextBlock Text="文件选择" Style="{StaticResource SectionTitleStyle}"/>
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="输入文件:" VerticalAlignment="Center" Width="70"/>
+                        <TextBox Grid.Column="1" Text="{Binding InputPath}" Margin="8,0" IsReadOnly="True" Style="{StaticResource InputTextBoxStyle}"/>
+                        <Button Grid.Column="2" Content="浏览..." Command="{Binding SelectInputFileCommand}" Style="{StaticResource PrimaryButtonStyle}"/>
+                    </Grid>
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="输出文件:" VerticalAlignment="Center" Width="70"/>
+                        <TextBox Grid.Column="1" Text="{Binding OutputPath}" Margin="8,0" IsReadOnly="True" Style="{StaticResource InputTextBoxStyle}"/>
+                        <Button Grid.Column="2" Content="浏览..." Command="{Binding SelectOutputPathCommand}" Style="{StaticResource PrimaryButtonStyle}"/>
+                    </Grid>
+                    <TextBlock Text="{Binding TotalPages, StringFormat=总页数: {0}}" Margin="0,8,0,0" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 旋转设置 -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="旋转设置" Style="{StaticResource SectionTitleStyle}"/>
+                    <TextBlock Text="旋转角度:" Margin="0,12,0,8" FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton Content="顺时针 90°" IsChecked="{Binding RotationAngle, Converter={StaticResource IntToBoolConverter}, ConverterParameter=90}"/>
+                        <RadioButton Content="180°" IsChecked="{Binding RotationAngle, Converter={StaticResource IntToBoolConverter}, ConverterParameter=180}" Margin="16,0,0,0"/>
+                        <RadioButton Content="逆时针 90°" IsChecked="{Binding RotationAngle, Converter={StaticResource IntToBoolConverter}, ConverterParameter=270}" Margin="16,0,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 页面范围 -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="页面范围" Style="{StaticResource SectionTitleStyle}"/>
+                    <RadioButton Content="全部页面" IsChecked="{Binding UseAllPages}" Margin="0,12,0,8"/>
+                    <StackPanel>
+                        <RadioButton Content="指定页面:" IsChecked="{Binding UseAllPages, Converter={StaticResource InverseBoolConverter}}"/>
+                        <TextBox Text="{Binding PageRange}" Margin="24,8,0,0" Width="200" HorizontalAlignment="Left" Style="{StaticResource InputTextBoxStyle}"/>
+                        <TextBlock Text="示例: 1,3,5-10" Margin="24,4,0,0" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 进度与操作 -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0">
+                <StackPanel>
+                    <ProgressBar Height="8" Value="{Binding ProgressValue}" Margin="0,0,0,16"/>
+                    <Button Content="开始旋转" Command="{Binding ProcessCommand}" IsEnabled="{Binding IsProcessing, Converter={StaticResource InverseBoolConverter}}"
+                            Style="{StaticResource PrimaryButtonStyle}" HorizontalAlignment="Center" Padding="32,12"/>
+                    <TextBlock Text="{Binding StatusMessage}" Margin="0,8,0,0" HorizontalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
