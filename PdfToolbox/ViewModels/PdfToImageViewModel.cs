@@ -5,7 +5,6 @@ using PdfToolbox.Helpers;
 using PdfToolbox.Services;
 using System.Collections.ObjectModel;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Input;
 
 namespace PdfToolbox.ViewModels;
@@ -37,15 +36,8 @@ public partial class PdfToImageViewModel : ViewModelBase
 
     private CancellationTokenSource? _cancellationTokenSource;
 
-    public ObservableCollection<string> ImageFormats { get; } = new()
-    {
-        "PNG", "JPG", "BMP", "TIFF"
-    };
-
-    public ObservableCollection<int> DpiOptions { get; } = new()
-    {
-        96, 150, 200, 300, 600
-    };
+    public ObservableCollection<string> ImageFormats { get; } = new() { "PNG", "JPG", "BMP", "TIFF" };
+    public ObservableCollection<int> DpiOptions { get; } = new() { 96, 150, 200, 300, 600 };
 
     public ICommand ConvertAsyncCommand { get; }
     public ICommand CancelConvertCommand { get; }
@@ -66,53 +58,32 @@ public partial class PdfToImageViewModel : ViewModelBase
             Title = "选择PDF文件",
             Multiselect = true
         };
-
         if (dialog.ShowDialog() == true)
-        {
             AddPdfFiles(dialog.FileNames);
-        }
     }
 
     [RelayCommand]
     private void AddFolder()
     {
-        var path = Helpers.FolderBrowserHelper.SelectFolder("选择包含PDF文件的文件夹");
+        var path = FolderBrowserHelper.SelectFolder("选择包含PDF文件的文件夹");
         if (string.IsNullOrEmpty(path)) return;
-
         var files = System.IO.Directory.EnumerateFiles(path, "*.pdf", System.IO.SearchOption.AllDirectories);
         AddPdfFiles(files);
     }
 
-    /// <summary>
-    /// 公开方法：添加多个 PDF 文件到转换列表（用于拖拽支持）。
-    /// 自动跳过重复文件。
-    /// </summary>
     public void AddPdfFiles(IEnumerable<string> filePaths)
     {
         if (filePaths == null) return;
-
         int added = 0, skipped = 0;
         foreach (var file in filePaths)
         {
             if (!System.IO.Path.GetExtension(file).Equals(".pdf", System.StringComparison.OrdinalIgnoreCase))
-            {
                 continue;
-            }
-
             if (PdfFiles.Any(p => string.Equals(p.FilePath, file, StringComparison.OrdinalIgnoreCase)))
-            {
-                skipped++;
-                continue;
-            }
-
-            PdfFiles.Add(new PdfFileItem
-            {
-                FilePath = file,
-                FileName = System.IO.Path.GetFileName(file)
-            });
+            { skipped++; continue; }
+            PdfFiles.Add(new PdfFileItem { FilePath = file, FileName = System.IO.Path.GetFileName(file) });
             added++;
         }
-
         if (added > 0 || skipped > 0)
         {
             var messages = new List<string>();
@@ -125,63 +96,35 @@ public partial class PdfToImageViewModel : ViewModelBase
     [RelayCommand]
     private void RemovePdf(PdfFileItem? item)
     {
-        if (item != null)
-        {
-            PdfFiles.Remove(item);
-        }
+        if (item != null) PdfFiles.Remove(item);
     }
 
     [RelayCommand]
-    private void ClearAll()
-    {
-        PdfFiles.Clear();
-    }
+    private void ClearAll() => PdfFiles.Clear();
 
     [RelayCommand]
     private void SelectOutputFolder()
     {
         var folder = FolderBrowserHelper.SelectFolder("选择输出文件夹");
-        if (!string.IsNullOrEmpty(folder))
-        {
-            OutputFolder = folder;
-        }
+        if (!string.IsNullOrEmpty(folder)) OutputFolder = folder;
     }
 
     private async Task ConvertAsyncImpl()
     {
-        // ========== 调试测试：验证按钮点击确实触达 ==========
-        IsConverting = true;
-        ProgressValue = 0;
-
-        // 先做简单的进度测试
-        for (int i = 0; i <= 100; i += 10)
-        {
-            await Task.Delay(200);
-            ProgressValue = i;
-        }
-
-        System.Windows.MessageBox.Show("点击测试完成，下面开始真正的转换", "调试",
-            System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-        // =================================================
-
         if (PdfFiles.Count == 0)
         {
             System.Windows.MessageBox.Show("请先添加PDF文件", "提示",
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-            IsConverting = false;
-            IsBusy = false;
             return;
         }
-
         if (string.IsNullOrEmpty(OutputFolder))
         {
             System.Windows.MessageBox.Show("请选择输出文件夹", "提示",
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-            IsConverting = false;
-            IsBusy = false;
             return;
         }
 
+        IsConverting = true;
         ProgressValue = 0;
         IsBusy = true;
         StatusMessage = "正在转换...";
@@ -189,14 +132,10 @@ public partial class PdfToImageViewModel : ViewModelBase
         _cancellationTokenSource = new CancellationTokenSource();
         var token = _cancellationTokenSource.Token;
 
-        var filePaths = new List<string>();
-        foreach (var f in PdfFiles)
-            filePaths.Add(f.FilePath);
-
+        var filePaths = PdfFiles.Select(f => f.FilePath).ToList();
         var outputFolder = OutputFolder;
         var imageFormat = ImageFormat;
         var dpi = Dpi;
-
         var progress = new Progress<int>(value => ProgressValue = value);
 
         int totalPages = 0;
@@ -205,126 +144,103 @@ public partial class PdfToImageViewModel : ViewModelBase
 
         try
         {
-            await Task.Run(() =>
+            // Phase 1: count total pages across all files
+            foreach (var filePath in filePaths)
             {
-                foreach (var filePath in filePaths)
+                if (token.IsCancellationRequested) return;
+                var (loadOk, loadError) = await _renderService.LoadDocumentAsync(filePath);
+                if (!loadOk)
                 {
-                    if (token.IsCancellationRequested) return;
-
-                    string? error = null;
-                    if (!_renderService.LoadDocument(filePath, out error))
-                    {
-                        System.Diagnostics.Debug.WriteLine($"无法打开PDF: {filePath} - {error}");
-                        continue;
-                    }
-
-                    totalPages += _renderService.PageCount;
-                    _renderService.CloseDocument();
+                    System.Diagnostics.Debug.WriteLine($"无法打开PDF: {filePath} - {loadError}");
+                    continue;
                 }
-
-                if (totalPages == 0)
-                {
-                    fatalError = "无法读取任何PDF文件的页面信息，请检查PDF文件是否损坏或格式不正确";
-                    return;
-                }
-
-                foreach (var filePath in filePaths)
-                {
-                    if (token.IsCancellationRequested) return;
-
-                    string? error = null;
-                    if (!_renderService.LoadDocument(filePath, out error))
-                    {
-                        System.Diagnostics.Debug.WriteLine($"无法加载PDF: {filePath} - {error}");
-                        continue;
-                    }
-
-                    string baseName = System.IO.Path.GetFileNameWithoutExtension(filePath) + "_page";
-
-                    for (int pageIndex = 0; pageIndex < _renderService.PageCount; pageIndex++)
-                    {
-                        if (token.IsCancellationRequested)
-                        {
-                            _renderService.CloseDocument();
-                            return;
-                        }
-
-                        using (var bitmap = _renderService.RenderPageAsBitmap(pageIndex, dpi))
-                        {
-                            if (bitmap != null)
-                            {
-                                string imageFilePath = System.IO.Path.Combine(
-                                    outputFolder,
-                                    $"{baseName}{pageIndex + 1}.{imageFormat.ToLower()}");
-
-                                switch (imageFormat.ToUpper())
-                                {
-                                    case "PNG":
-                                        bitmap.Save(imageFilePath, System.Drawing.Imaging.ImageFormat.Png);
-                                        break;
-                                    case "JPG":
-                                        bitmap.Save(imageFilePath, System.Drawing.Imaging.ImageFormat.Jpeg);
-                                        break;
-                                    case "BMP":
-                                        bitmap.Save(imageFilePath, System.Drawing.Imaging.ImageFormat.Bmp);
-                                        break;
-                                    case "TIFF":
-                                        bitmap.Save(imageFilePath, System.Drawing.Imaging.ImageFormat.Tiff);
-                                        break;
-                                    default:
-                                        bitmap.Save(imageFilePath, System.Drawing.Imaging.ImageFormat.Png);
-                                        break;
-                                }
-                            }
-                        }
-
-                        processedPages++;
-                        int percent = (int)((double)processedPages / totalPages * 100);
-                        ((IProgress<int>)progress).Report(percent);
-                    }
-
-                    _renderService.CloseDocument();
-                }
-            }, token);
-
-            if (fatalError != null)
-            {
-                System.Windows.MessageBox.Show(fatalError, "转换失败",
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-                StatusMessage = "转换失败";
+                totalPages += _renderService.PageCount;
+                _renderService.CloseDocument();
             }
-            else if (!token.IsCancellationRequested)
+
+            if (totalPages == 0)
             {
-                System.Windows.MessageBox.Show($"转换完成!\n共转换 {processedPages} 张图片\n输出目录: {outputFolder}", "完成",
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-                StatusMessage = $"转换完成，共 {processedPages} 张图片";
+                fatalError = "无法读取任何PDF文件的页面信息，请检查PDF文件是否损坏或格式不正确";
+                return;
             }
-            else
+
+            // Phase 2: render each page to image
+            foreach (var filePath in filePaths)
             {
-                StatusMessage = "转换已取消";
+                if (token.IsCancellationRequested) return;
+
+                var (loadOk2, loadError2) = await _renderService.LoadDocumentAsync(filePath);
+                if (!loadOk2)
+                {
+                    System.Diagnostics.Debug.WriteLine($"无法加载PDF: {filePath} - {loadError2}");
+                    continue;
+                }
+
+                string baseName = System.IO.Path.GetFileNameWithoutExtension(filePath) + "_page";
+
+                for (int pageIndex = 0; pageIndex < _renderService.PageCount; pageIndex++)
+                {
+                    if (token.IsCancellationRequested)
+                    {
+                        _renderService.CloseDocument();
+                        return;
+                    }
+
+                    using var bitmap = await _renderService.RenderPageAsBitmapAsync(pageIndex, dpi);
+                    if (bitmap != null)
+                    {
+                        string imageFilePath = System.IO.Path.Combine(outputFolder,
+                            $"{baseName}{pageIndex + 1}.{imageFormat.ToLower()}");
+                        switch (imageFormat.ToUpper())
+                        {
+                            case "PNG":  bitmap.Save(imageFilePath, System.Drawing.Imaging.ImageFormat.Png);  break;
+                            case "JPG":  bitmap.Save(imageFilePath, System.Drawing.Imaging.ImageFormat.Jpeg); break;
+                            case "BMP":  bitmap.Save(imageFilePath, System.Drawing.Imaging.ImageFormat.Bmp);  break;
+                            case "TIFF": bitmap.Save(imageFilePath, System.Drawing.Imaging.ImageFormat.Tiff); break;
+                            default:     bitmap.Save(imageFilePath, System.Drawing.Imaging.ImageFormat.Png);  break;
+                        }
+                    }
+
+                    processedPages++;
+                    ((IProgress<int>)progress).Report((int)((double)processedPages / totalPages * 100));
+                }
+
+                _renderService.CloseDocument();
             }
         }
-        catch (OperationCanceledException)
-        {
-            StatusMessage = "转换已取消";
-        }
+        catch (OperationCanceledException) { }
         catch (System.Exception ex)
         {
-            System.Windows.MessageBox.Show($"转换失败: {ex.Message}", "错误",
+            fatalError = ex.Message;
+        }
+
+        if (fatalError != null)
+        {
+            System.Windows.MessageBox.Show(fatalError, "转换失败",
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             StatusMessage = "转换失败";
         }
-        finally
+        else if (!token.IsCancellationRequested)
         {
-            IsConverting = false;
-            IsBusy = false;
-            _cancellationTokenSource?.Dispose();
-            _cancellationTokenSource = null;
+            System.Windows.MessageBox.Show($"转换完成!\n共转换 {processedPages} 张图片\n输出目录: {outputFolder}", "完成",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            StatusMessage = $"转换完成，共 {processedPages} 张图片";
         }
+        else
+        {
+            StatusMessage = "转换已取消";
+        }
+
+        IsConverting = false;
+        IsBusy = false;
+        _cancellationTokenSource?.Dispose();
+        _cancellationTokenSource = null;
     }
 
-    private void CancelConvertImpl()
-    {
-        _cancellationTokenSource?.Cancel();
-    }
+    private void CancelConvertImpl() => _cancellationTokenSource?.Cancel();
+}
+public partial class PdfFileItem : ObservableObject
+{
+    [ObservableProperty] private string _filePath = "";
+    [ObservableProperty] private string _fileName = "";
 }

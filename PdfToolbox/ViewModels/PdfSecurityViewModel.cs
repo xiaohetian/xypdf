@@ -3,8 +3,6 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using PdfToolbox.Services;
 using PdfToolbox.Helpers;
-using System.Collections.ObjectModel;
-using System.IO;
 
 namespace PdfToolbox.ViewModels;
 
@@ -16,7 +14,6 @@ public partial class PdfSecurityViewModel : ViewModelBase
     [ObservableProperty] private string _inputPath = "";
     [ObservableProperty] private string _outputPath = "";
     [ObservableProperty] private int _totalPages;
-    [ObservableProperty] private int _progressValue;
     [ObservableProperty] private bool _isProcessing;
 
     // Encrypt
@@ -37,41 +34,33 @@ public partial class PdfSecurityViewModel : ViewModelBase
     [RelayCommand]
     private void SelectInputFile()
     {
-        var dialog = new OpenFileDialog { Filter = "PDF文件 (*.pdf)|*.pdf", Title = "选择PDF文件" };
-        if (dialog.ShowDialog() == true)
+        var dialog = new OpenFileDialog
         {
-            SetInputFile(dialog.FileName);
-        }
+            Filter = "PDF文件 (*.pdf)|*.pdf",
+            Title = "选择PDF文件"
+        };
+        if (dialog.ShowDialog() == true) SetInputFile(dialog.FileName);
     }
 
-    /// <summary>
-    /// 设置输入 PDF 文件（公开方法，用于拖拽支持）。
-    /// </summary>
     public void SetInputFile(string filePath)
     {
-        if (string.IsNullOrEmpty(filePath) || !System.IO.File.Exists(filePath))
-        {
-            return;
-        }
-
+        if (string.IsNullOrEmpty(filePath) || !System.IO.File.Exists(filePath)) return;
         InputPath = filePath;
-        try
-        {
-            TotalPages = _pdfToolService.GetPdfPageCount(InputPath);
-        }
-        catch
-        {
-            TotalPages = 0;
-        }
-        OutputPath = Path.Combine(
-            Path.GetDirectoryName(InputPath) ?? "",
-            Path.GetFileNameWithoutExtension(InputPath) + (ActiveTab == 0 ? "_加密" : "_解密") + ".pdf");
+        try { TotalPages = new PdfToolService().GetPdfPageCount(filePath); }
+        catch { TotalPages = 0; }
     }
 
     [RelayCommand]
     private void SelectOutputPath()
     {
-        var dialog = new SaveFileDialog { Filter = "PDF文件 (*.pdf)|*.pdf", Title = "保存PDF", FileName = Path.GetFileName(OutputPath) };
+        var dialog = new SaveFileDialog
+        {
+            Filter = "PDF文件 (*.pdf)|*.pdf",
+            Title = "保存PDF文件",
+            FileName = System.IO.Path.GetFileName(OutputPath)
+        };
+        if (!string.IsNullOrEmpty(OutputPath))
+            dialog.InitialDirectory = System.IO.Path.GetDirectoryName(OutputPath);
         if (dialog.ShowDialog() == true) OutputPath = dialog.FileName;
     }
 
@@ -80,59 +69,60 @@ public partial class PdfSecurityViewModel : ViewModelBase
     {
         if (string.IsNullOrEmpty(InputPath))
         {
-            System.Windows.MessageBox.Show("请选择输入文件", "提示", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            System.Windows.MessageBox.Show("请选择输入文件", "提示",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
             return;
         }
         if (string.IsNullOrEmpty(OutputPath))
         {
-            System.Windows.MessageBox.Show("请选择输出路径", "提示", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            System.Windows.MessageBox.Show("请选择输出路径", "提示",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
             return;
         }
 
-        IsProcessing = true; ProgressValue = 0; IsBusy = true;
-
-        using var cts = new CancellationTokenSource();
-        var progress = new Progress<int>(v => ProgressValue = v);
+        IsProcessing = true;
+        string? result = null;
 
         try
         {
-            string? result = null;
+            using var cts = new System.Threading.CancellationTokenSource();
+            var progress = new Progress<int>(v => ProgressValue = v);
+
             if (ActiveTab == 0)
             {
+                // 加密
                 if (string.IsNullOrWhiteSpace(UserPassword))
                 {
-                    System.Windows.MessageBox.Show("请输入用户密码", "提示", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                    IsProcessing = false; IsBusy = false; return;
+                    System.Windows.MessageBox.Show("请输入用户密码", "提示",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    IsProcessing = false; return;
                 }
-                StatusMessage = "正在加密...";
-                result = await _pdfToolService.EncryptPdfAsync(InputPath, OutputPath, UserPassword, OwnerPassword, AllowPrinting, AllowCopy, AllowModify, progress, cts.Token);
+                result = await _pdfToolService.EncryptPdfAsync(
+                    InputPath, OutputPath, UserPassword, OwnerPassword,
+                    AllowPrinting, AllowCopy, AllowModify, progress, cts.Token);
+                ShowResult("加密", result);
             }
             else
             {
+                // 解密
                 if (string.IsNullOrWhiteSpace(DecryptPassword))
                 {
-                    System.Windows.MessageBox.Show("请输入密码", "提示", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                    IsProcessing = false; IsBusy = false; return;
+                    System.Windows.MessageBox.Show("请输入密码", "提示",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    IsProcessing = false; return;
                 }
-                StatusMessage = "正在解密...";
-                result = await _pdfToolService.DecryptPdfAsync(InputPath, OutputPath, DecryptPassword, progress, cts.Token);
-            }
-
-            if (string.IsNullOrEmpty(result))
-            {
-                System.Windows.MessageBox.Show(ActiveTab == 0 ? "加密成功!" : "解密成功!", "完成", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-                StatusMessage = "处理完成";
-            }
-            else
-            {
-                System.Windows.MessageBox.Show(result, "失败", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-                StatusMessage = "处理失败";
+                result = await _pdfToolService.DecryptPdfAsync(
+                    InputPath, OutputPath, DecryptPassword, progress, cts.Token);
+                ShowResult("解密", result);
             }
         }
-        catch (Exception ex)
+        catch (System.Exception ex)
         {
-            System.Windows.MessageBox.Show($"处理失败: {ex.Message}", "错误", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            IsProcessing = false;
+            System.Windows.MessageBox.Show($"处理失败: {ex.Message}", "错误",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            StatusMessage = "处理失败";
         }
-        finally { IsProcessing = false; IsBusy = false; }
+        finally { IsBusy = false; }
     }
 }

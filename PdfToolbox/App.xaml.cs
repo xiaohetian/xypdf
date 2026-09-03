@@ -16,6 +16,7 @@ public partial class App : System.Windows.Application
     protected override void OnStartup(System.Windows.StartupEventArgs e)
     {
         base.OnStartup(e);
-        ThemeService.Instance.ApplyTheme("默认蓝");
+        var savedTheme = SettingsService.Instance.Settings.SelectedTheme;
+        ThemeService.Instance.ApplyTheme(string.IsNullOrEmpty(savedTheme) ? "默认蓝" : savedTheme);
     }
 }

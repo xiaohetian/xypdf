@@ -18,44 +18,39 @@ public class PdfRenderService : IDisposable
     public int PageCount => (int)(_document?.PageCount ?? 0);
     public string? CurrentFilePath => _currentFilePath;
 
-    public bool LoadDocument(string filePath, out string? errorMessage)
+    /// <summary>
+    /// Returns (success, errorMessage). errorMessage is null on success.
+    /// </summary>
+    public async Task<(bool success, string? errorMessage)> LoadDocumentAsync(string filePath)
     {
-        errorMessage = null;
         try
         {
             CloseDocument();
 
-            // 检查文件是否存在
             if (!File.Exists(filePath))
             {
-                errorMessage = "文件不存在";
-                System.Diagnostics.Debug.WriteLine($"文件不存在: {filePath}");
-                return false;
+                return (false, "文件不存在");
             }
 
-            // 使用 Windows.Data.Pdf 加载 PDF
-            var file = StorageFile.GetFileFromPathAsync(filePath).AsTask().GetAwaiter().GetResult();
-            _document = PdfDocument.LoadFromFileAsync(file).AsTask().GetAwaiter().GetResult();
+            var file = await StorageFile.GetFileFromPathAsync(filePath);
+            _document = await PdfDocument.LoadFromFileAsync(file);
 
-            // 检查是否有页面
             if (_document.PageCount == 0)
             {
                 _document = null;
-                errorMessage = $"PDF 文件 [{filePath}] 没有可读页面。";
-                return false;
+                return (false, $"PDF 文件 [{filePath}] 没有可读页面。");
             }
 
             _currentFilePath = filePath;
-            return PageCount > 0;
+            return (true, null);
         }
         catch (Exception ex)
         {
-            errorMessage = ex.Message;
             System.Diagnostics.Debug.WriteLine($"加载PDF失败: {ex.Message}");
             System.Diagnostics.Debug.WriteLine($"堆栈跟踪: {ex.StackTrace}");
             _document = null;
             _currentFilePath = null;
-            return false;
+            return (false, ex.Message);
         }
     }
 
@@ -65,7 +60,7 @@ public class PdfRenderService : IDisposable
         _currentFilePath = null;
     }
 
-    public BitmapSource? RenderPage(int pageIndex, double scale, int dpi = 96)
+    public async Task<BitmapSource?> RenderPageAsync(int pageIndex, double scale, int dpi = 96)
     {
         if (_document == null || pageIndex < 0 || pageIndex >= PageCount)
             return null;
@@ -73,7 +68,6 @@ public class PdfRenderService : IDisposable
         try
         {
             var page = _document.GetPage((uint)pageIndex);
-            // page.Size 单位为 DIPs (1 DIP = 1/96 英寸)
             var size = page.Size;
             var width = (int)(size.Width / 96.0 * dpi * scale);
             var height = (int)(size.Height / 96.0 * dpi * scale);
@@ -88,7 +82,7 @@ public class PdfRenderService : IDisposable
             };
 
             var stream = new InMemoryRandomAccessStream();
-            page.RenderToStreamAsync(stream, options).AsTask().GetAwaiter().GetResult();
+            await page.RenderToStreamAsync(stream, options);
             stream.Seek(0);
 
             var bitmap = new BitmapImage();
@@ -109,7 +103,7 @@ public class PdfRenderService : IDisposable
     /// <summary>
     /// 渲染指定页面为 System.Drawing.Bitmap（用于保存到文件）
     /// </summary>
-    public System.Drawing.Bitmap? RenderPageAsBitmap(int pageIndex, int dpi = 150)
+    public async Task<System.Drawing.Bitmap?> RenderPageAsBitmapAsync(int pageIndex, int dpi = 150)
     {
         if (_document == null || pageIndex < 0 || pageIndex >= PageCount)
             return null;
@@ -117,7 +111,7 @@ public class PdfRenderService : IDisposable
         try
         {
             var page = _document.GetPage((uint)pageIndex);
-            var size = page.Size; // DIPs (1 DIP = 1/96 英寸)
+            var size = page.Size;
             var width = (int)(size.Width / 96.0 * dpi);
             var height = (int)(size.Height / 96.0 * dpi);
 
@@ -131,7 +125,7 @@ public class PdfRenderService : IDisposable
             };
 
             var stream = new InMemoryRandomAccessStream();
-            page.RenderToStreamAsync(stream, options).AsTask().GetAwaiter().GetResult();
+            await page.RenderToStreamAsync(stream, options);
             stream.Seek(0);
 
             return new System.Drawing.Bitmap(stream.AsStream());
@@ -152,8 +146,6 @@ public class PdfRenderService : IDisposable
             return System.Drawing.SizeF.Empty;
 
         var page = _document.GetPage((uint)pageIndex);
-        // page.Size 单位为 DIPs (1 DIP = 1/96 英寸)
-        // 转换为点 (1 点 = 1/72 英寸)
         var size = page.Size;
         return new System.Drawing.SizeF(
             (float)(size.Width * 72.0 / 96.0),

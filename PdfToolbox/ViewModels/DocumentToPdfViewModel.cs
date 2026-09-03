@@ -6,36 +6,32 @@ using System.Collections.ObjectModel;
 
 namespace PdfToolbox.ViewModels;
 
+/// <summary>
+/// 文档转 PDF 视图模型。
+/// 注意：仅 TXT / RTF / HTML 能保留基本格式；
+/// Markdown / CSV / JSON / XML / LOG 以纯文本方式转换，无格式渲染。
+/// </summary>
 public partial class DocumentToPdfViewModel : ViewModelBase
 {
     private readonly DocumentService _documentService = new();
 
-    [ObservableProperty]
-    private string _inputPath = "";
+    // 支持格式渲染的文档类型
+    private static readonly string[] FormatCapableTypes = { "TXT", "RTF", "HTML" };
+    // 仅纯文本转换的类型（会弹出提示）
+    private static readonly string[] PlainTextOnlyTypes = { "Markdown (MD)", "CSV", "JSON", "XML", "LOG" };
 
-    [ObservableProperty]
-    private string _outputPath = "";
-
-    [ObservableProperty]
-    private string _pageSize = "A4";
-
-    [ObservableProperty]
-    private int _margin = 20;
-
-    [ObservableProperty]
-    private string _documentType = "TXT";
-
-    [ObservableProperty]
-    private int _progressValue;
-
-    [ObservableProperty]
-    private bool _isConverting;
-
-    private CancellationTokenSource? _cancellationTokenSource;
+    [ObservableProperty] private string _inputPath = "";
+    [ObservableProperty] private string _outputPath = "";
+    [ObservableProperty] private string _pageSize = "A4";
+    [ObservableProperty] private int _margin = 20;
+    [ObservableProperty] private string _documentType = "TXT";
+    [ObservableProperty] private bool _isConverting;
 
     public ObservableCollection<string> PageSizes { get; } = new() { "A4", "A3", "Letter" };
-    public ObservableCollection<string> DocumentTypes { get; } = new() { 
-        "TXT", "RTF", "HTML", "Markdown (MD)", "CSV", "JSON", "XML", "LOG" 
+    public ObservableCollection<string> DocumentTypes { get; } = new()
+    {
+        "TXT", "RTF", "HTML",
+        "Markdown (MD)", "CSV", "JSON", "XML", "LOG"
     };
 
     public DocumentToPdfViewModel()
@@ -44,10 +40,7 @@ public partial class DocumentToPdfViewModel : ViewModelBase
             SettingsService.Instance.GetDefaultOutputPath(), "output.pdf");
     }
 
-    partial void OnDocumentTypeChanged(string value)
-    {
-        UpdateOutputPath();
-    }
+    partial void OnDocumentTypeChanged(string value) => UpdateOutputPath();
 
     private void UpdateOutputPath()
     {
@@ -80,39 +73,21 @@ public partial class DocumentToPdfViewModel : ViewModelBase
             Filter = filter,
             Title = "选择文档文件"
         };
-
-        if (dialog.ShowDialog() == true)
-        {
-            SetInputFile(dialog.FileName);
-        }
+        if (dialog.ShowDialog() == true) SetInputFile(dialog.FileName);
     }
 
-    /// <summary>
-    /// 设置输入文档文件（公开方法，用于拖拽支持）。
-    /// 如果扩展名不属于当前 DocumentType，则尝试自动切换 DocumentType。
-    /// </summary>
     public void SetInputFile(string filePath)
     {
-        if (string.IsNullOrEmpty(filePath) || !System.IO.File.Exists(filePath))
-        {
-            return;
-        }
-
-        // 自动适配文档类型：检查文件扩展名属于哪种类型并切换
+        if (string.IsNullOrEmpty(filePath) || !System.IO.File.Exists(filePath)) return;
         var ext = System.IO.Path.GetExtension(filePath).ToLowerInvariant();
         var matchedType = DetectDocumentTypeByExtension(ext);
-        if (!string.IsNullOrEmpty(matchedType))
-        {
-            DocumentType = matchedType;
-        }
-
+        if (!string.IsNullOrEmpty(matchedType)) DocumentType = matchedType;
         InputPath = filePath;
         OutputPath = System.IO.Path.ChangeExtension(InputPath, ".pdf");
     }
 
-    private static string? DetectDocumentTypeByExtension(string extension)
-    {
-        return extension switch
+    private static string? DetectDocumentTypeByExtension(string extension) =>
+        extension switch
         {
             ".txt" => "TXT",
             ".rtf" => "RTF",
@@ -124,7 +99,6 @@ public partial class DocumentToPdfViewModel : ViewModelBase
             ".log" => "LOG",
             _ => null
         };
-    }
 
     [RelayCommand]
     private void SelectOutputPath()
@@ -135,16 +109,9 @@ public partial class DocumentToPdfViewModel : ViewModelBase
             Title = "保存PDF文件",
             FileName = System.IO.Path.GetFileName(OutputPath)
         };
-
         if (!string.IsNullOrEmpty(OutputPath))
-        {
             dialog.InitialDirectory = System.IO.Path.GetDirectoryName(OutputPath);
-        }
-
-        if (dialog.ShowDialog() == true)
-        {
-            OutputPath = dialog.FileName;
-        }
+        if (dialog.ShowDialog() == true) OutputPath = dialog.FileName;
     }
 
     [RelayCommand]
@@ -156,7 +123,6 @@ public partial class DocumentToPdfViewModel : ViewModelBase
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
             return;
         }
-
         if (string.IsNullOrEmpty(OutputPath))
         {
             System.Windows.MessageBox.Show("请选择输出路径", "提示",
@@ -164,78 +130,36 @@ public partial class DocumentToPdfViewModel : ViewModelBase
             return;
         }
 
-        IsConverting = true;
-        ProgressValue = 0;
-        IsBusy = true;
-        StatusMessage = "正在转换...";
-
-        _cancellationTokenSource = new CancellationTokenSource();
-        var progress = new Progress<int>(value => ProgressValue = value);
-
-        try
+        // 提示纯文本格式的特性差异
+        if (PlainTextOnlyTypes.Contains(DocumentType))
         {
-            string? result = null;
+            System.Windows.MessageBox.Show(
+                $"【{DocumentType}】当前仅支持纯文本转换，表格、样式等格式信息将丢失。",
+                "格式说明", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        }
 
+        IsConverting = true;
+        var result = await RunOperationAsync("转换", async (ct, prog) =>
+        {
             switch (DocumentType)
             {
                 case "TXT":
-                    result = await _documentService.ConvertTextToPdfAsync(
-                        InputPath, OutputPath, PageSize, Margin, null, progress, _cancellationTokenSource.Token);
-                    break;
+                    return await _documentService.ConvertTextToPdfAsync(
+                        InputPath, OutputPath, PageSize, Margin, null, prog, ct);
                 case "RTF":
-                    result = await _documentService.ConvertRtfToPdfAsync(
-                        InputPath, OutputPath, PageSize, Margin, progress, _cancellationTokenSource.Token);
-                    break;
+                    return await _documentService.ConvertRtfToPdfAsync(
+                        InputPath, OutputPath, PageSize, Margin, prog, ct);
                 case "HTML":
-                    result = await _documentService.ConvertHtmlToPdfAsync(
-                        InputPath, OutputPath, PageSize, Margin, progress, _cancellationTokenSource.Token);
-                    break;
-                case "Markdown (MD)":
-                case "CSV":
-                case "JSON":
-                case "XML":
-                case "LOG":
-                    // 这些类型都作为文本文件处理
-                    result = await _documentService.ConvertTextToPdfAsync(
-                        InputPath, OutputPath, PageSize, Margin, null, progress, _cancellationTokenSource.Token);
-                    break;
+                    return await _documentService.ConvertHtmlToPdfAsync(
+                        InputPath, OutputPath, PageSize, Margin, prog, ct);
+                default: // Markdown/CSV/JSON/XML/LOG 均走纯文本路径
+                    return await _documentService.ConvertTextToPdfAsync(
+                        InputPath, OutputPath, PageSize, Margin, null, prog, ct);
             }
-
-            if (string.IsNullOrEmpty(result))
-            {
-                System.Windows.MessageBox.Show("转换完成!", "完成",
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-                StatusMessage = "转换完成";
-            }
-            else
-            {
-                System.Windows.MessageBox.Show(result, "转换失败",
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-                StatusMessage = "转换失败";
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            StatusMessage = "转换已取消";
-        }
-        catch (Exception ex)
-        {
-            System.Windows.MessageBox.Show($"转换失败: {ex.Message}", "错误",
-                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-            StatusMessage = "转换失败";
-        }
-        finally
-        {
-            IsConverting = false;
-            IsBusy = false;
-            _cancellationTokenSource?.Dispose();
-            _cancellationTokenSource = null;
-        }
+        });
+        ShowResult("转换", result);
     }
 
     [RelayCommand]
-    private void CancelConvert()
-    {
-        _cancellationTokenSource?.Cancel();
-    }
+    private void CancelConvert() { }
 }

@@ -13,31 +13,24 @@ public class RecentFileService
 
     public List<RecentFileInfo> GetFiles()
     {
-        var paths = _settings.Settings.AppSettingsData.RecentFiles;
+        var paths = _settings.Settings.RecentFiles;
         return paths.Select(p => new RecentFileInfo { FilePath = p }).ToList();
     }
 
     public void AddFile(string filePath)
     {
         if (string.IsNullOrEmpty(filePath)) return;
-
-        var list = _settings.Settings.AppSettingsData.RecentFiles;
-
-        // if already exists, move to top
+        var list = _settings.Settings.RecentFiles;
         list.RemoveAll(f => f.Equals(filePath, StringComparison.OrdinalIgnoreCase));
-
         list.Insert(0, filePath);
-
-        // trim to max
         while (list.Count > MaxRecentFiles)
             list.RemoveAt(list.Count - 1);
-
         _settings.Save();
     }
 
     public void Clear()
     {
-        _settings.Settings.AppSettingsData.RecentFiles.Clear();
+        _settings.Settings.RecentFiles.Clear();
         _settings.Save();
     }
 }

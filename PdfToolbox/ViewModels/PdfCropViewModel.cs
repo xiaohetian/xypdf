@@ -10,37 +10,15 @@ public partial class PdfCropViewModel : ViewModelBase
 {
     private readonly PdfService _pdfService = new();
 
-    [ObservableProperty]
-    private string _inputPath = "";
-
-    [ObservableProperty]
-    private string _outputPath = "";
-
-    [ObservableProperty]
-    private double _leftMargin = 36;
-
-    [ObservableProperty]
-    private double _rightMargin = 36;
-
-    [ObservableProperty]
-    private double _topMargin = 36;
-
-    [ObservableProperty]
-    private double _bottomMargin = 36;
-
-    [ObservableProperty]
-    private bool _sameMarginForAll = true;
-
-    [ObservableProperty]
-    private int _totalPages;
-
-    [ObservableProperty]
-    private int _progressValue;
-
-    [ObservableProperty]
-    private bool _isCropping;
-
-    private CancellationTokenSource? _cancellationTokenSource;
+    [ObservableProperty] private string _inputPath = "";
+    [ObservableProperty] private string _outputPath = "";
+    [ObservableProperty] private double _leftMargin = 36;
+    [ObservableProperty] private double _rightMargin = 36;
+    [ObservableProperty] private double _topMargin = 36;
+    [ObservableProperty] private double _bottomMargin = 36;
+    [ObservableProperty] private bool _sameMarginForAll = true;
+    [ObservableProperty] private int _totalPages;
+    [ObservableProperty] private bool _isCropping;
 
     public PdfCropViewModel()
     {
@@ -55,33 +33,15 @@ public partial class PdfCropViewModel : ViewModelBase
             Filter = "PDF文件 (*.pdf)|*.pdf",
             Title = "选择要裁剪的PDF文件"
         };
-
-        if (dialog.ShowDialog() == true)
-        {
-            SetInputFile(dialog.FileName);
-        }
+        if (dialog.ShowDialog() == true) SetInputFile(dialog.FileName);
     }
 
-    /// <summary>
-    /// 设置输入 PDF 文件（公开方法，用于拖拽支持）。
-    /// </summary>
     public void SetInputFile(string filePath)
     {
-        if (string.IsNullOrEmpty(filePath) || !System.IO.File.Exists(filePath))
-        {
-            return;
-        }
-
+        if (string.IsNullOrEmpty(filePath) || !System.IO.File.Exists(filePath)) return;
         InputPath = filePath;
-        try
-        {
-            TotalPages = _pdfService.GetPdfPageCount(InputPath);
-        }
-        catch
-        {
-            TotalPages = 0;
-        }
-
+        try { TotalPages = _pdfService.GetPdfPageCount(InputPath); }
+        catch { TotalPages = 0; }
         var fileName = System.IO.Path.GetFileNameWithoutExtension(InputPath);
         OutputPath = System.IO.Path.Combine(
             System.IO.Path.GetDirectoryName(OutputPath) ?? "",
@@ -97,16 +57,9 @@ public partial class PdfCropViewModel : ViewModelBase
             Title = "保存裁剪后的PDF",
             FileName = System.IO.Path.GetFileName(OutputPath)
         };
-
         if (!string.IsNullOrEmpty(OutputPath))
-        {
             dialog.InitialDirectory = System.IO.Path.GetDirectoryName(OutputPath);
-        }
-
-        if (dialog.ShowDialog() == true)
-        {
-            OutputPath = dialog.FileName;
-        }
+        if (dialog.ShowDialog() == true) OutputPath = dialog.FileName;
     }
 
     [RelayCommand]
@@ -129,14 +82,12 @@ public partial class PdfCropViewModel : ViewModelBase
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
             return;
         }
-
         if (string.IsNullOrEmpty(OutputPath))
         {
             System.Windows.MessageBox.Show("请选择输出路径", "提示",
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
             return;
         }
-
         if (LeftMargin < 0 || RightMargin < 0 || TopMargin < 0 || BottomMargin < 0)
         {
             System.Windows.MessageBox.Show("边距不能为负数", "提示",
@@ -145,55 +96,12 @@ public partial class PdfCropViewModel : ViewModelBase
         }
 
         IsCropping = true;
-        ProgressValue = 0;
-        IsBusy = true;
-        StatusMessage = "正在裁剪...";
-
-        _cancellationTokenSource = new CancellationTokenSource();
-        var progress = new Progress<int>(value => ProgressValue = value);
-
-        try
-        {
-            var result = await _pdfService.CropPdfAsync(
-                InputPath, OutputPath,
-                LeftMargin, TopMargin, RightMargin, BottomMargin,
-                progress, _cancellationTokenSource.Token);
-
-            if (string.IsNullOrEmpty(result))
-            {
-                System.Windows.MessageBox.Show("裁剪完成!", "完成",
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-                StatusMessage = "裁剪完成";
-            }
-            else
-            {
-                System.Windows.MessageBox.Show(result, "裁剪失败",
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-                StatusMessage = "裁剪失败";
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            StatusMessage = "裁剪已取消";
-        }
-        catch (Exception ex)
-        {
-            System.Windows.MessageBox.Show($"裁剪失败: {ex.Message}", "错误",
-                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-            StatusMessage = "裁剪失败";
-        }
-        finally
-        {
-            IsCropping = false;
-            IsBusy = false;
-            _cancellationTokenSource?.Dispose();
-            _cancellationTokenSource = null;
-        }
+        var result = await RunOperationAsync("裁剪", async (ct, prog) =>
+            await _pdfService.CropPdfAsync(InputPath, OutputPath,
+                LeftMargin, TopMargin, RightMargin, BottomMargin, prog, ct));
+        ShowResult("裁剪", result);
     }
 
     [RelayCommand]
-    private void CancelCrop()
-    {
-        _cancellationTokenSource?.Cancel();
-    }
+    private void CancelCrop() { }
 }

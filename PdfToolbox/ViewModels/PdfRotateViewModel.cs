@@ -69,7 +69,7 @@ public partial class PdfRotateViewModel : ViewModelBase
         try
         {
             var pageRange = UseAllPages ? "all" : PageRange;
-            var result = await _pdfToolService.RotatePagesAsync(InputPath, OutputPath, RotationAngle, pageRange, progress, cts.Token);
+            var result = await _pdfToolService.RotatePagesAsync(InputPath, OutputPath, pageRange, RotationAngle, progress, cts.Token);
 
             if (string.IsNullOrEmpty(result))
             {

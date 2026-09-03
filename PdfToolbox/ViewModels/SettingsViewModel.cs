@@ -33,20 +33,15 @@ public partial class SettingsViewModel : ViewModelBase
         set
         {
             if (value >= 0 && value < Themes.Length)
-            {
                 SelectedTheme = Themes[value];
-            }
         }
     }
 
-    public SettingsViewModel()
-    {
-        LoadSettings();
-    }
+    public SettingsViewModel() => LoadSettings();
 
     private void LoadSettings()
     {
-        var data = _settingsService.Settings.AppSettingsData;
+        var data = _settingsService.Settings;
         SelectedTheme = string.IsNullOrEmpty(data.SelectedTheme) ? Themes[0] : data.SelectedTheme;
         DefaultOutputPath = _settingsService.GetDefaultOutputPath();
         DefaultDpi = data.DefaultDpi;
@@ -57,25 +52,25 @@ public partial class SettingsViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(ThemeIndex));
         ThemeService.Instance.ApplyTheme(value);
-        _settingsService.Settings.AppSettingsData.SelectedTheme = value;
+        _settingsService.Settings.SelectedTheme = value;
         if (AutoSave) _settingsService.Save();
     }
 
     partial void OnDefaultOutputPathChanged(string value)
     {
-        _settingsService.Settings.AppSettingsData.DefaultOutputPath = value;
+        _settingsService.Settings.DefaultOutputPath = value;
         if (AutoSave) _settingsService.Save();
     }
 
     partial void OnDefaultDpiChanged(int value)
     {
-        _settingsService.Settings.AppSettingsData.DefaultDpi = value;
+        _settingsService.Settings.DefaultDpi = value;
         if (AutoSave) _settingsService.Save();
     }
 
     partial void OnAutoSaveChanged(bool value)
     {
-        _settingsService.Settings.AppSettingsData.AutoSave = value;
+        _settingsService.Settings.AutoSave = value;
         _settingsService.Save();
     }
 
@@ -83,9 +78,6 @@ public partial class SettingsViewModel : ViewModelBase
     private void SelectOutputPath()
     {
         var path = FolderBrowserHelper.SelectFolder("选择默认输出目录");
-        if (path != null)
-        {
-            DefaultOutputPath = path;
-        }
+        if (path != null) DefaultOutputPath = path;
     }
 }

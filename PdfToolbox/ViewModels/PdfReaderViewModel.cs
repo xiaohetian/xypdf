@@ -10,15 +10,12 @@ namespace PdfToolbox.ViewModels;
 
 public partial class PdfReaderViewModel : ViewModelBase
 {
-    private readonly PdfRenderService _renderService = new();
-
     [ObservableProperty]
     private ObservableCollection<PdfTabItem> _tabs = new();
 
     [ObservableProperty]
     private PdfTabItem? _selectedTab;
 
-    // 单页模式
     [ObservableProperty]
     private BitmapSource? _currentPageImage;
 
@@ -28,12 +25,11 @@ public partial class PdfReaderViewModel : ViewModelBase
     [ObservableProperty]
     private int _totalPages;
 
-    // 全部页面模式（垂直滚动）
     [ObservableProperty]
     private ObservableCollection<PageImageItem> _allPages = new();
 
     [ObservableProperty]
-    private bool _showAllPages = true; // 默认显示全部页面
+    private bool _showAllPages = true;
 
     [ObservableProperty]
     private double _zoomLevel = 1.0;
@@ -49,6 +45,9 @@ public partial class PdfReaderViewModel : ViewModelBase
 
     [ObservableProperty]
     private RecentFileInfo? _selectedRecentFile;
+
+    [ObservableProperty]
+    private int _currentRotation = 0;
 
     public PdfReaderViewModel()
     {
@@ -67,7 +66,7 @@ public partial class PdfReaderViewModel : ViewModelBase
         if (value != null)
         {
             AddTabInternal(value.FilePath);
-            SelectedRecentFile = null; // reset so same file can be re-selected
+            SelectedRecentFile = null;
         }
     }
 
@@ -84,31 +83,20 @@ public partial class PdfReaderViewModel : ViewModelBase
         if (dialog.ShowDialog() == true)
         {
             foreach (var filePath in dialog.FileNames)
-            {
                 AddTab(filePath);
-            }
         }
     }
 
-    private void AddTab(string filePath)
-    {
-        AddTabInternal(filePath);
-    }
+    private void AddTab(string filePath) => AddTabInternal(filePath);
 
-    /// <summary>
-    /// 公开方法：批量添加 PDF 文件（用于拖拽支持）。
-    /// 对每个文件执行与 OpenPdf 相同的逻辑。
-    /// </summary>
     public void AddPdfs(IEnumerable<string> filePaths)
     {
         if (filePaths == null) return;
         foreach (var path in filePaths)
-        {
             AddTabInternal(path);
-        }
     }
 
-    private void AddTabInternal(string filePath)
+    private async void AddTabInternal(string filePath)
     {
         var fileName = System.IO.Path.GetFileName(filePath);
         var tab = new PdfTabItem
@@ -116,11 +104,11 @@ public partial class PdfReaderViewModel : ViewModelBase
             FilePath = filePath,
             FileName = fileName,
             IsSelected = true,
-            RenderService = new PdfRenderService() // 每个标签页有自己的渲染服务
+            RenderService = new PdfRenderService()
         };
 
-        string? errorMessage = null;
-        if (tab.RenderService.LoadDocument(filePath, out errorMessage))
+        var (loadOk, loadError) = await tab.RenderService.LoadDocumentAsync(filePath);
+        if (loadOk)
         {
             tab.PageCount = tab.RenderService.PageCount;
             tab.CurrentPage = 1;
@@ -131,12 +119,11 @@ public partial class PdfReaderViewModel : ViewModelBase
         else
         {
             var message = $"无法打开文件: {filePath}";
-            if (!string.IsNullOrEmpty(errorMessage))
-            {
-                message += $"\n\n错误详情: {errorMessage}";
-            }
+            if (!string.IsNullOrEmpty(loadError))
+                message += $"\n\n错误详情: {loadError}";
             System.Windows.MessageBox.Show(message, "错误",
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            tab.IsSelected = false;
             return;
         }
 
@@ -149,89 +136,60 @@ public partial class PdfReaderViewModel : ViewModelBase
 
         Tabs.Add(tab);
         SelectedTab = tab;
-        LoadCurrentPage();
+        await LoadCurrentPageAsync();
     }
 
     partial void OnSelectedTabChanged(PdfTabItem? value)
     {
         if (value != null && value.IsLoaded && value.RenderService != null)
         {
-            // 更新当前显示的文档信息，不重复加载（文档已在 AddTab 时加载）
             TotalPages = value.RenderService.PageCount;
             CurrentPage = value.CurrentPage;
             CurrentFileName = value.FileName;
             IsDocumentLoaded = true;
-            LoadCurrentPage();
+            _ = LoadCurrentPageAsync();
         }
     }
 
     [RelayCommand]
     private void NextPage()
     {
-        if (CurrentPage < TotalPages)
-        {
-            CurrentPage++;
-            LoadCurrentPage();
-        }
+        if (CurrentPage < TotalPages) { CurrentPage++; _ = LoadCurrentPageAsync(); }
     }
 
     [RelayCommand]
     private void PreviousPage()
     {
-        if (CurrentPage > 1)
-        {
-            CurrentPage--;
-            LoadCurrentPage();
-        }
+        if (CurrentPage > 1) { CurrentPage--; _ = LoadCurrentPageAsync(); }
     }
 
     [RelayCommand]
-    private void FirstPage()
-    {
-        CurrentPage = 1;
-        LoadCurrentPage();
-    }
+    private void FirstPage() { CurrentPage = 1; _ = LoadCurrentPageAsync(); }
 
     [RelayCommand]
-    private void LastPage()
-    {
-        CurrentPage = TotalPages;
-        LoadCurrentPage();
-    }
+    private void LastPage() { CurrentPage = TotalPages; _ = LoadCurrentPageAsync(); }
 
     [RelayCommand]
     private void ZoomIn()
     {
-        if (ZoomLevel < 3.0)
-        {
-            ZoomLevel += 0.25;
-            LoadCurrentPage();
-        }
+        if (ZoomLevel < 3.0) { ZoomLevel += 0.25; _ = LoadCurrentPageAsync(); }
     }
 
     [RelayCommand]
     private void ZoomOut()
     {
-        if (ZoomLevel > 0.25)
-        {
-            ZoomLevel -= 0.25;
-            LoadCurrentPage();
-        }
+        if (ZoomLevel > 0.25) { ZoomLevel -= 0.25; _ = LoadCurrentPageAsync(); }
     }
 
     [RelayCommand]
-    private void FitWidth()
-    {
-        ZoomLevel = 1.0;
-        LoadCurrentPage();
-    }
+    private void FitWidth() { ZoomLevel = 1.0; _ = LoadCurrentPageAsync(); }
 
     [RelayCommand]
     private void RotateLeft()
     {
         CurrentRotation -= 90;
         if (CurrentRotation < 0) CurrentRotation += 360;
-        LoadCurrentPage();
+        _ = LoadCurrentPageAsync();
     }
 
     [RelayCommand]
@@ -239,61 +197,41 @@ public partial class PdfReaderViewModel : ViewModelBase
     {
         CurrentRotation += 90;
         if (CurrentRotation >= 360) CurrentRotation -= 360;
-        LoadCurrentPage();
+        _ = LoadCurrentPageAsync();
     }
 
     [RelayCommand]
     private void ToggleViewMode()
     {
         ShowAllPages = !ShowAllPages;
-        LoadCurrentPage();
+        _ = LoadCurrentPageAsync();
     }
 
-    [ObservableProperty]
-    private int _currentRotation = 0;
-
-    private void LoadCurrentPage()
+    private async Task LoadCurrentPageAsync()
     {
         if (SelectedTab == null || SelectedTab.RenderService == null || SelectedTab.RenderService.PageCount == 0) return;
 
         if (ShowAllPages)
         {
-            // 加载所有页面
             AllPages.Clear();
             for (int i = 0; i < SelectedTab.RenderService.PageCount; i++)
             {
-                var image = SelectedTab.RenderService.RenderPage(i, ZoomLevel);
+                var image = await SelectedTab.RenderService.RenderPageAsync(i, ZoomLevel);
                 if (image != null)
                 {
-                    // 应用旋转
                     if (CurrentRotation != 0)
-                    {
-                        var transform = new System.Windows.Media.RotateTransform(CurrentRotation);
-                        image = new TransformedBitmap(image, transform);
-                    }
-                    AllPages.Add(new PageImageItem
-                    {
-                        PageNumber = i + 1,
-                        Image = image
-                    });
+                        image = new TransformedBitmap(image, new System.Windows.Media.RotateTransform(CurrentRotation));
+                    AllPages.Add(new PageImageItem { PageNumber = i + 1, Image = image });
                 }
             }
         }
         else
         {
-            // 单页模式
-            var image = SelectedTab.RenderService.RenderPage(CurrentPage - 1, ZoomLevel);
-            
-            // 应用旋转
+            var image = await SelectedTab.RenderService.RenderPageAsync(CurrentPage - 1, ZoomLevel);
             if (CurrentRotation != 0 && image != null)
-            {
-                var transform = new System.Windows.Media.RotateTransform(CurrentRotation);
-                CurrentPageImage = new TransformedBitmap(image, transform);
-            }
+                CurrentPageImage = new TransformedBitmap(image, new System.Windows.Media.RotateTransform(CurrentRotation));
             else
-            {
                 CurrentPageImage = image;
-            }
         }
     }
 
@@ -301,17 +239,12 @@ public partial class PdfReaderViewModel : ViewModelBase
     private void CloseTab(PdfTabItem? tab)
     {
         if (tab == null) return;
-
         var index = Tabs.IndexOf(tab);
         Tabs.Remove(tab);
-
-        // 关闭被移除标签页的渲染服务
         tab.RenderService?.CloseDocument();
 
         if (Tabs.Count > 0)
-        {
             SelectedTab = Tabs[Math.Max(0, index - 1)];
-        }
         else
         {
             CurrentPageImage = null;
@@ -325,48 +258,25 @@ public partial class PdfReaderViewModel : ViewModelBase
 
     public override void OnDeactivated()
     {
-        // 关闭所有标签页的渲染服务
         foreach (var tab in Tabs)
-        {
             tab.RenderService?.CloseDocument();
-        }
         base.OnDeactivated();
     }
 }
 
 public partial class PdfTabItem : ObservableObject
 {
-    [ObservableProperty]
-    private string _filePath = "";
-
-    [ObservableProperty]
-    private string _fileName = "";
-
-    [ObservableProperty]
-    private int _pageCount;
-
-    [ObservableProperty]
-    private int _currentPage = 1;
-
-    [ObservableProperty]
-    private bool _isLoaded;
-
-    [ObservableProperty]
-    private bool _isSelected;
-
-    // 每个标签页拥有自己的渲染服务实例
-    [ObservableProperty]
-    private PdfRenderService? _renderService;
+    [ObservableProperty] private string _filePath = "";
+    [ObservableProperty] private string _fileName = "";
+    [ObservableProperty] private int _pageCount;
+    [ObservableProperty] private int _currentPage = 1;
+    [ObservableProperty] private bool _isLoaded;
+    [ObservableProperty] private bool _isSelected;
+    [ObservableProperty] private PdfRenderService? _renderService;
 }
 
-/// <summary>
-/// 页面图像项（用于全部页面视图）
-/// </summary>
 public partial class PageImageItem : ObservableObject
 {
-    [ObservableProperty]
-    private int _pageNumber;
-
-    [ObservableProperty]
-    private BitmapSource? _image;
+    [ObservableProperty] private int _pageNumber;
+    [ObservableProperty] private BitmapSource? _image;
 }
