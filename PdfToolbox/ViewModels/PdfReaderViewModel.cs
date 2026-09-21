@@ -216,6 +216,7 @@ public partial class PdfReaderViewModel : ViewModelBase
             AllPages.Clear();
             for (int i = 0; i < SelectedTab.RenderService.PageCount; i++)
             {
+                if (App.ShutdownCts.IsCancellationRequested) return;
                 var image = await SelectedTab.RenderService.RenderPageAsync(i, ZoomLevel);
                 if (image != null)
                 {

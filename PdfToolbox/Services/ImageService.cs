@@ -40,20 +40,25 @@ public class ImageService
 
                     var imagePath = images[i];
 
-                    var pdfPage = document.AddPage();
-                    pdfPage.MediaBox = new PdfRectangle(new XRect(0, 0, pageWidth.Point, pageHeight.Point));
-
-                    using var gfx = XGraphics.FromPdfPage(pdfPage);
                     using var xImage = XImage.FromFile(imagePath);
 
                     var imageWidth = xImage.PixelWidth;
                     var imageHeight = xImage.PixelHeight;
 
-                    double scale = Math.Min(pageWidth.Point / imageWidth, pageHeight.Point / imageHeight);
+                    // 横版图片 → 页面也横放（交换宽高）
+                    var actualWidth = imageWidth > imageHeight ? pageHeight : pageWidth;
+                    var actualHeight = imageWidth > imageHeight ? pageWidth : pageHeight;
+
+                    var pdfPage = document.AddPage();
+                    pdfPage.MediaBox = new PdfRectangle(new XRect(0, 0, actualWidth.Point, actualHeight.Point));
+
+                    using var gfx = XGraphics.FromPdfPage(pdfPage);
+
+                    double scale = Math.Min(actualWidth.Point / imageWidth, actualHeight.Point / imageHeight);
                     double displayWidth = imageWidth * scale;
                     double displayHeight = imageHeight * scale;
 
-                    gfx.DrawImage(xImage, (pageWidth.Point - displayWidth) / 2, (pageHeight.Point - displayHeight) / 2, displayWidth, displayHeight);
+                    gfx.DrawImage(xImage, (actualWidth.Point - displayWidth) / 2, (actualHeight.Point - displayHeight) / 2, displayWidth, displayHeight);
 
                     progress?.Report((int)((double)(i + 1) / total * 100));
                 }

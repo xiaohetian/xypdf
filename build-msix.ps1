@@ -1,4 +1,4 @@
-param([string]$ProjectRoot = "D:\DELL\PDF工具")
+﻿param([string]$ProjectRoot = "D:\DELL\PDF工具")
 
 $ErrorActionPreference = "Stop"
 $makeappx = "D:\Windows Kits\10\bin\10.0.26100.0\x64\makeappx.exe"
@@ -16,8 +16,8 @@ $stageDir = Join-Path $ProjectRoot "PdfToolbox.Package\Stage"
 Remove-Item $stageDir -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $stageDir -Force | Out-Null
 
-# Copy all published files
-Get-ChildItem $publishDir -File | Copy-Item -Destination $stageDir
+# Copy all published files (recursive: 含 engine\ 转换引擎子目录)
+Copy-Item (Join-Path $publishDir "*") -Destination $stageDir -Recurse -Force
 
 # Copy Assets
 $as = Join-Path $ProjectRoot "PdfToolbox.Package\Assets"

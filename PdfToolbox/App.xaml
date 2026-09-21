@@ -3,7 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:PdfToolbox"
              xmlns:helpers="clr-namespace:PdfToolbox.Helpers"
-             StartupUri="MainWindow.xaml">
+             StartupUri="MainWindow.xaml"
+             ShutdownMode="OnMainWindowClose">
     <Application.Resources>
         <ResourceDictionary>
             <!-- 转换器 -->
@@ -26,6 +27,7 @@
             <Geometry x:Key="IconPdfToImage">M4,4 L14,4 L18,8 L18,20 L4,20 Z M8,13 L11,17 L14,13 L18,18 L4,18 Z M14,8 L14,4 L18,8 Z M7,8 A1.5,1.5 0 1,0 7,11 A1.5,1.5 0 1,0 7,8 Z</Geometry>
             <Geometry x:Key="IconWatermark">M12,3 C11,9 7,11 4,14 C2,16 2,19 4,21 C6,23 9,23 12,20 C15,23 18,23 20,21 C22,19 22,16 20,14 C17,11 13,9 12,3 Z</Geometry>
             <Geometry x:Key="IconSecurity">M12,2 L4,5 L4,11 C4,17 7,22 12,24 C17,22 20,17 20,11 L20,5 Z M12,15 A2,2 0 1,0 12,11 A2,2 0 1,0 12,15 Z M12,15 L12,17</Geometry>
+            <Geometry x:Key="IconOfd">M6,2 L14,2 L18,6 L18,22 L6,22 Z M14,2 L14,6 L18,6 M6,10 A3,3 0 1,1 12,10 A3,3 0 1,1 6,10 Z</Geometry>
             <Geometry x:Key="IconSettings">M12,15 A3,3 0 1,0 12,9 A3,3 0 1,0 12,15 Z M19.4,15 A1.65,1.65 0 0,0 21.62,16 A1.65,1.65 0 0,0 19.4,15 Z M4.6,15 A1.65,1.65 0 0,0 2.38,16 A1.65,1.65 0 0,0 4.6,15 Z M12,19.4 A1.65,1.65 0 0,0 11,21.62 A1.65,1.65 0 0,0 12,19.4 Z M7.05,7.05 A1.65,1.65 0 0,0 5.64,5.64 A1.65,1.65 0 0,0 7.05,7.05 Z M16.95,16.95 A1.65,1.65 0 0,0 18.36,18.36 A1.65,1.65 0 0,0 16.95,16.95 Z</Geometry>
             <Geometry x:Key="IconAbout">M12,2 A10,10 0 1,0 12,22 A10,10 0 1,0 12,2 Z M11,10 L13,10 L13,18 L11,18 Z M11,6 L13,6 L13,8 L11,8 Z</Geometry>
 

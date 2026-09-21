@@ -44,6 +44,7 @@ public partial class MainViewModel : ObservableObject
         MainMenuItems.Add(new() { Label = "PDF 裁剪", CommandParameter = "PDF裁剪", Icon = TryFindGeometry("IconCrop"), IconColor = iconBrush });
         MainMenuItems.Add(new() { Label = "图片转 PDF", CommandParameter = "图片转PDF", Icon = TryFindGeometry("IconImageToPdf"), IconColor = iconBrush });
         MainMenuItems.Add(new() { Label = "文档转 PDF", CommandParameter = "TXT/RTF/HTML转PDF", Icon = TryFindGeometry("IconDocToPdf"), IconColor = iconBrush });
+        MainMenuItems.Add(new() { Label = "OFD 转 PDF", CommandParameter = "OFD转PDF", Icon = TryFindGeometry("IconOfd"), IconColor = iconBrush });
         MainMenuItems.Add(new() { Label = "PDF 转图片", CommandParameter = "PDF转图片", Icon = TryFindGeometry("IconPdfToImage"), IconColor = iconBrush });
         MainMenuItems.Add(new() { Label = "PDF 水印", CommandParameter = "PDF水印", Icon = TryFindGeometry("IconWatermark"), IconColor = iconBrush });
         MainMenuItems.Add(new() { Label = "PDF 加密/解密", CommandParameter = "PDF加密/解密", Icon = TryFindGeometry("IconSecurity"), IconColor = iconBrush });
@@ -66,6 +67,7 @@ public partial class MainViewModel : ObservableObject
         _viewModelFactories["PDF裁剪"] = () => new PdfCropViewModel();
         _viewModelFactories["图片转PDF"] = () => new ImageToPdfViewModel();
         _viewModelFactories["TXT/RTF/HTML转PDF"] = () => new DocumentToPdfViewModel();
+        _viewModelFactories["OFD转PDF"] = () => new OfdConvertViewModel();
         _viewModelFactories["PDF转图片"] = () => new PdfToImageViewModel();
         _viewModelFactories["PDF水印"] = () => new PdfWatermarkViewModel();
         _viewModelFactories["PDF加密/解密"] = () => new PdfSecurityViewModel();

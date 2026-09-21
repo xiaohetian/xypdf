@@ -13,6 +13,8 @@ public static class DragDropHelper
     // ============== 常用扩展名常量 ==============
     public static readonly string[] PdfExtensions = { ".pdf" };
 
+    public static readonly string[] OfdExtensions = { ".ofd" };
+
     public static readonly string[] ImageExtensions = { ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif" };
 
     // 各文档类型对应的扩展名
