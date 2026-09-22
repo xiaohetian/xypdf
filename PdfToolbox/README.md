@@ -15,16 +15,17 @@
 
 ## 项目简介
 
-**PDF全能工具箱** 是一款基于 .NET 8 + WPF 开发的桌面应用程序，采用 MVVM 架构设计，提供 8 大核心PDF处理功能。无需安装 GhostScript 等第三方系统组件，开箱即用。
+**PDF全能工具箱** 是一款基于 .NET 8 + WPF 开发的桌面应用程序，采用 MVVM 架构设计，提供 **10 大核心 PDF 处理功能**，并内置 OFD 转 PDF 转换引擎。无需安装 GhostScript、Java 等第三方系统组件，开箱即用。
 
 ### 核心特性
 
 - 🎨 **现代化UI** — 精心设计的深色侧边栏 + 浅色内容区，圆角卡片、阴影效果、流畅的交互动画
 - ️ **MVVM架构** — 使用 CommunityToolkit.Mvvm 实现数据绑定和命令模式，代码清晰可维护
--  **零外部依赖** — 无需安装 GhostScript、ImageMagick 等系统组件
+- **零外部依赖** — 无需安装 GhostScript、ImageMagick、Java 等系统组件（OFD 引擎内置打包）
 - 📊 **进度反馈** — 所有长时间操作均提供实时进度条和状态提示
 - ⚡ **异步处理** — 所有文件操作均为异步执行，UI不会卡顿
 - 🔧 **可取消操作** — 支持随时取消正在进行的处理任务
+- 📄 **OFD 支持** — 内置 Java 转换引擎（随包部署），OFD 一键转 PDF，批量/拖拽均可
 
 ---
 
@@ -145,6 +146,19 @@ PDF文档安全保护。
 | **权限控制** | 允许打印/允许复制/允许修改 |
 | **解密** | 输入密码移除PDF加密保护 |
 
+### 9. 📄 OFD 转 PDF
+
+调用内置转换引擎（ofd-convert.exe，Java 打包）批量将 OFD 文件转换为 PDF。
+
+| 功能 | 说明 |
+|------|------|
+| **批量转换** | 一次添加多个 OFD 文件，逐个转换、互不影响 |
+| **拖拽添加** | 支持将 .ofd 文件拖入界面，自动过滤无效文件 |
+| **输出目录** | 自定义输出目录（留空 = 输出到源文件所在目录） |
+| **防覆盖** | 已存在同名 PDF 时自动追加 `-转换`、`-转换-2` 后缀 |
+| **实时进度** | 进度条 + 日志区实时显示每一步转换结果 |
+| **超时保护** | 单个文件超过 60 秒自动终止，避免卡死 |
+
 ---
 
 ## 技术架构
@@ -162,6 +176,7 @@ PDF文档安全保护。
 | **System.Drawing.Common** | 8.0.0 | 图像处理 |
 | **Newtonsoft.Json** | 13.0.3 | JSON序列化 |
 | **System.Management** | 8.0.0 | 硬件信息获取 |
+| **ofdrw + jpackage** | — | OFD 转 PDF 引擎（Java 17，94MB 随包部署） |
 
 ### 项目结构
 
@@ -184,6 +199,7 @@ PdfToolbox/
 ├── Services/                       # 业务逻辑层
 │   ├── DocumentService.cs          # 文档转换服务
 │   ├── ImageService.cs             # 图片处理服务
+│   ├── OfdConvertService.cs        # OFD转PDF服务（调用内置引擎）
 │   ├── PdfRenderService.cs         # PDF渲染服务
 │   ├── PdfService.cs               # PDF操作服务
 │   ├── PdfToolService.cs           # PDF工具服务
@@ -200,7 +216,8 @@ PdfToolbox/
 │   ├── ImageToPdfViewModel.cs      # 图片转PDF
 │   ├── DocumentToPdfViewModel.cs   # 文档转PDF
 │   ├── PdfWatermarkViewModel.cs    # 水印
-│   └── PdfSecurityViewModel.cs     # 加密/解密
+│   ├── PdfSecurityViewModel.cs     # 加密/解密
+│   └── OfdConvertViewModel.cs      # OFD转PDF
 │
 ├── Views/                          # 视图层 (XAML)
 │   ├── PdfReaderView.xaml          # 阅读器界面
@@ -210,7 +227,11 @@ PdfToolbox/
 │   ├── ImageToPdfView.xaml         # 图片转PDF界面
 │   ├── DocumentToPdfView.xaml      # 文档转PDF界面
 │   ├── PdfWatermarkView.xaml       # 水印界面
-│   └── PdfSecurityView.xaml        # 加密/解密界面
+│   ├── PdfSecurityView.xaml        # 加密/解密界面
+│   └── OfdConvertView.xaml         # OFD转PDF界面
+│
+├── engine/                         # OFD转PDF引擎（Java 打包，随程序部署）
+│   └── ofd-convert/                # ofd-convert.exe + JRE 运行时 + ofd-convert-0.1.0.jar
 │
 └── Resources/                      # 资源文件
     └── pdftoolbox.ico              # 应用图标
@@ -224,7 +245,7 @@ PdfToolbox/
 
 - **操作系统**: Windows 10/11 (x64)
 - **运行时**: 无需安装 .NET（自包含发布）
-- **磁盘空间**: 约 250MB
+- **磁盘空间**: 约 250MB（含约 94MB OFD 转换引擎）
 
 ### 安装使用
 
@@ -252,6 +273,20 @@ dotnet publish -c Release -r win-x64 --self-contained true `
   -p:PublishReadyToRun=true `
   -o ./publish
 ```
+
+> 注：OFD 转换引擎默认随程序目录部署（`engine\ofd-convert\`），无需单独安装 Java。
+
+### 打包微软商店 MSIX
+
+需要 Windows SDK（makeappx/signtool）与 PowerShell 7（pwsh）：
+
+```powershell
+# 在解决方案根目录执行（仓库根：D:\DELL\PDF工具）
+pwsh -ExecutionPolicy Bypass -File .\build-msix.ps1     # 默认路径，或
+pwsh -ExecutionPolicy Bypass -File .\build-msix.ps1 -ProjectRoot <路径>
+```
+
+产物为仓库根目录下的 `PdfToolbox-YYYYMMDD.msix`，直接上传至 **Partner Center** 即可。脚本会自动：Release 自包含发布 → 递归打包（含引擎）→ makeappx 生成 MSIX → 签名校验（未签名属正常，商店提交不需要）。
 
 ---
 
@@ -300,6 +335,9 @@ A: 使用合并界面的上移/下移/置顶/置底按钮调整文件顺序，�
 ### Q: 加密后的PDF无法用其他软件打开？
 A: 请确保使用正确的用户密码。所有者密码用于修改权限，用户密码用于打开文档。
 
+### Q: OFD 转换提示"未找到转换引擎"？
+A: 请确认程序目录下存在 `engine\ofd-convert\ofd-convert.exe`（约 94MB）。直接双击运行源码构建产物时需确保该目录随构建复制到位。
+
 ---
 
 ## 开发说明
@@ -310,6 +348,13 @@ A: 请确保使用正确的用户密码。所有者密码用于修改权限，�
 2. 在 `Views/` 创建对应的 XAML 视图
 3. 在 `MainWindow.xaml` 的 `ContentControl.Resources` 中添加 DataTemplate
 4. 在 `MainViewModel.cs` 的菜单项列表中添加新菜单
+
+### OFD 转换引擎约定
+
+- 引擎路径：`AppContext.BaseDirectory\engine\ofd-convert\ofd-convert.exe`，子进程方式调用，参数 1 = 输入 OFD，参数 2 = 输出 PDF
+- 转换规则：输出到源文件同目录「原名.pdf」，已存在依次追加 `-转换`、`-转换-2` 后缀，不覆盖原文件
+- 退出码 0 = 成功；非 0 读取 stderr 作为错误信息；单文件 60 秒超时自动终止
+- 引擎通过 `PdfToolbox.csproj` 的 `Content CopyToOutputDirectory=PreserveNewest` 随构建输出
 
 ### 样式规范
 
@@ -331,17 +376,23 @@ MIT License
 
 - **作者**: 小河田
 - **微信**: DoAfterThink
-- **版本**: v1.0.0
+- **版本**: v1.3.0
 - **发布日期**: 2026年
 
 ---
 
 ## 更新日志
 
-### v1.0.0 (2026)
-- ✅ 初始版本发布
-- ✅ 9大核心功能模块（新增PDF转图片）
-- ✅ 现代化UI设计
-- ✅ MVVM架构
-- ✅ 零外部依赖
+### v1.3.0 (2026)
+- ✅ 新增 **OFD 转 PDF** 模块：内置 Java 转换引擎（94MB 随包部署，支持批量/拖拽/自定义输出目录/进度日志）
+- ✅ 修复关闭窗口后进程残留与 CPU 占用（OnMainWindowClose + 渲染循环取消）
+- ✅ 横版图片转 PDF 自动横放（交换页面宽高）优化
+- ✅ MSIX 商店打包修复：引擎递归进包、清单编码/文案修复、版本 1.3.0.0
+
+### v1.2.1 (2026)
+- ✅ 全面重构：PDF 服务异步化、统一操作封装
+- ✅ 新增水印矢量去除、补齐 PDF 转图片
+
+### v1.2.0 (2026)
+- ✅ PDF 合并/拆分/裁剪/旋转/水印/加密/阅读/转换等功能
 - ✅ 硬件指纹授权系统
