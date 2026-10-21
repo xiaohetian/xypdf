@@ -34,7 +34,10 @@ Write-Host "Files staged: $( (Get-ChildItem $stageDir -Recurse -File | Measure-O
 
 # Step 3: Create MSIX with makeappx.exe
 Write-Host "=== Step 3: Creating MSIX with makeappx.exe ===" -ForegroundColor Cyan
-$msixName = "PdfToolbox-" + (Get-Date -Format "yyyyMMdd") + ".msix"
+[xml]$manifestXml = Get-Content (Join-Path $ProjectRoot "PdfToolbox.Package\Package.appxmanifest") -Raw -Encoding UTF8
+$pkgVer = $manifestXml.GetElementsByTagName('Identity')[0].Version
+$msixName = "PdfToolbox-$pkgVer-" + (Get-Date -Format "yyyyMMdd") + ".msix"
+Write-Host "  Package version: $pkgVer" -ForegroundColor Cyan
 $msixPath = Join-Path $ProjectRoot $msixName
 Remove-Item $msixPath -ErrorAction SilentlyContinue
 

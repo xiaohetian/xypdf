@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/.NET-8.0-blue" alt=".NET 8.0"/>
   <img src="https://img.shields.io/badge/Framework-WPF-purple" alt="WPF"/>
   <img src="https://img.shields.io/badge/Architecture-MVVM-green" alt="MVVM"/>
-  <img src="https://img.shields.io/badge/Version-v1.3.0-brightgreen" alt="Version"/>
+  <img src="https://img.shields.io/badge/Version-v1.3.1-brightgreen" alt="Version"/>
   <img src="https://img.shields.io/badge/License-MIT-orange" alt="License"/>
 </p>
 
@@ -129,12 +129,15 @@ xypdf/
 
 ## 更新日志
 
+### v1.3.1 (2026-10-21)
+- ✅ 修复新下载 OFD 文件转换后乱码（同步 OFD 引擎字体字形映射修复版，实测样例 PDF 无乱码）
+- ✅ 版本号升级至 1.3.1.0（微软商店要求每次提交的版本号唯一）
+
 ### v1.3.0 (2026)
 - ✅ 新增 **OFD 转 PDF**：内置 Java 引擎（94MB 随包），批量/拖拽/自定义输出目录/进度日志
 - ✅ 修复关闭窗口后进程残留与 CPU 占用
 - ✅ 横版图片转 PDF 自动横放
 - ✅ MSIX 商店打包修复：引擎递归进包、清单编码修复、版本 1.3.0.0
-- ✅ 修复新下载 OFD 文件转换后乱码（同步引擎字体字形映射修复版，2026-10-21 重打 MSIX 包 `PdfToolbox-20261021.msix`）
 
 ### v1.2.1 (2026)
 - ✅ 全面重构：PDF 服务异步化、统一操作封装、水印矢量去除、补齐 PDF 转图片
